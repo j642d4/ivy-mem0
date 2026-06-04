@@ -14,9 +14,6 @@ services:
     volumes:
       - ./history:/app/history
       - .:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
     command: >
       sh -c "rm -rf /app/packages && pip install -q --force-reinstall --no-deps mem0ai && alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
@@ -28,26 +25,6 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - AUTH_DISABLED=${AUTH_DISABLED:-false}
       - MEM0_TELEMETRY=${MEM0_TELEMETRY:-true}
-
-  postgres:
-    image: ankane/pgvector:v0.5.1
-    restart: on-failure
-    shm_size: "128mb"
-    networks:
-      - mem0_network
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    healthcheck:
-      test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - postgres_db:/var/lib/postgresql/data
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-    ports:
-      - "8432:5432"
 
   mem0-dashboard:
     build: ./dashboard
@@ -67,9 +44,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
-volumes:
-  postgres_db:
 
 networks:
   mem0_network:
