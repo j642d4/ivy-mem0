@@ -47,7 +47,7 @@ jobs:
           IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
 
           docker build \
-            -t $IMAGE_URI -f server/Dockerfile ./server
+            -t $IMAGE_URI -f server/dev.Dockerfile ./server
 
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
