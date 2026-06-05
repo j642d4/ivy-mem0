@@ -1,0 +1,77 @@
+name: MEM0 CI Pipeline - Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - feature/**
+      - ai-milvus-integrate
+
+env:
+  C_NAME: "ivy-mem0-staging"
+  TR_ARN: "ecs-task-role-ivy-mem0-staging"
+  ER_ARN: "ecs-task-execution-role-ivy-mem0-staging"
+  AWS_LG: "/ecs/staging/ivy-mem0"
+  AWS_SP: "mem0"
+  T_FAMILY: "ivy-mem0-staging"
+  ECR_REPOSITORY_NAME: "ivy-backend-staging"
+
+jobs:
+  build-and-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: List directory contents
+        run: ls -al
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STG }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and tag Docker image
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
+
+          docker build \
+            -t $IMAGE_URI -f server/Dockerfile ./server
+
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Push Docker image to Amazon ECR
+        run: |
+          docker push ${{ env.IMAGE_URI }}
+
+      - name: Tag latest and push latest
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
+          docker tag $IMAGE_URI \
+                     ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
+
+      - name: Save Docker image as artifact
+        run: |
+          docker save -o ivy-mem0-image.tar ${{ env.IMAGE_URI }}
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ivy-mem0-image.tar
+
+    outputs:
+      image_uri: ${{ env.IMAGE_URI }}
