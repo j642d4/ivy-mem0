@@ -23,6 +23,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_INSTANCE_NAME=NEXT_PUBLIC_INSTANCE_NAME
 
+# basePath is compiled into the build output, so it must be known at build time
+# (unlike NEXT_PUBLIC_* values, it cannot be swapped at container start).
+ARG NEXT_BASE_PATH=""
+ENV NEXT_BASE_PATH=$NEXT_BASE_PATH
+
 RUN npm run build
 
 # Production

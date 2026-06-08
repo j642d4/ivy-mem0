@@ -58,6 +58,7 @@ jobs:
           DASHBOARD_IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME_DASHBOARD:$IMAGE_TAG"
 
           docker build \
+            --build-arg NEXT_BASE_PATH=/mem0 \
             -t $DASHBOARD_IMAGE_URI -f server/dashboard/Dockerfile server/dashboard
 
           echo "DASHBOARD_IMAGE_URI=$DASHBOARD_IMAGE_URI" >> $GITHUB_ENV

@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
+// Set at build time when the app is served behind a path-based ALB/proxy rule
+// that forwards the prefix as-is (e.g. https://host/mem0/* -> this app).
+// Leave unset for local dev / deployments served from the domain root.
+const basePath = process.env.NEXT_BASE_PATH || "";
+
 const nextConfig = {
   output: "standalone",
+  ...(basePath ? { basePath } : {}),
   eslint: {
     ignoreDuringBuilds: false,
   },
