@@ -55,14 +55,6 @@ jobs:
         run: |
           docker push ${{ env.IMAGE_URI }}
 
-      - name: Tag latest and push latest
-        run: |
-          IMAGE_TAG="${{ github.sha }}"
-          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
-          docker tag $IMAGE_URI \
-                     ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
-
       - name: Save Docker image as artifact
         run: |
           docker save -o ivy-mem0-image.tar ${{ env.IMAGE_URI }}
