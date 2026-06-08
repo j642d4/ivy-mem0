@@ -133,6 +133,22 @@ set_session_factory(SessionLocal)
 initialize_state(DEFAULT_CONFIG)
 
 
+class StripPathPrefixMiddleware:
+    """Strips a path prefix that a path-based ALB/reverse-proxy rule forwards
+    as-is (e.g. /mem0-api/memories -> /memories), and records it as root_path
+    so FastAPI generates correct links in OpenAPI docs and redirects."""
+
+    def __init__(self, app, prefix: str):
+        self.app = app
+        self.prefix = prefix
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith(self.prefix):
+            scope["path"] = scope["path"][len(self.prefix):] or "/"
+            scope["root_path"] = self.prefix
+        await self.app(scope, receive, send)
+
+
 app = FastAPI(
     title="Mem0 REST APIs",
     description=(
@@ -155,6 +171,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Set when the API is exposed behind a path-based ALB/proxy rule that forwards
+# the prefix as-is (e.g. https://host/mem0-api/* -> this service). Leave unset
+# for deployments where the API is served from the domain root.
+MEM0_PATH_PREFIX = os.environ.get("MEM0_PATH_PREFIX", "").rstrip("/")
+if MEM0_PATH_PREFIX:
+    app.add_middleware(StripPathPrefixMiddleware, prefix=MEM0_PATH_PREFIX)
 
 app.include_router(auth_router.router)
 app.include_router(api_keys_router.router)
