@@ -10,6 +10,23 @@ const PUBLIC_PATHS = [
   "/favicon",
 ];
 
+// request.nextUrl is basePath-aware: its `pathname` is the logical route with
+// any configured basePath already stripped, and cloning it preserves that
+// basePath so the redirect Location is correctly prefixed (e.g. /mem0/login
+// instead of /login when basePath is "/mem0"). Plain `new URL(path, request.url)`
+// would bypass this and always produce a root-relative Location.
+function redirectTo(request: NextRequest, pathname: string, search?: Record<string, string>) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  if (search) {
+    for (const [key, value] of Object.entries(search)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  return NextResponse.redirect(url);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -28,10 +45,10 @@ export async function middleware(request: NextRequest) {
         const { needsSetup } = await res.json();
 
         if (needsSetup && pathname !== "/setup") {
-          return NextResponse.redirect(new URL("/setup", request.url));
+          return redirectTo(request, "/setup");
         }
         if (!needsSetup && pathname === "/setup") {
-          return NextResponse.redirect(new URL("/login", request.url));
+          return redirectTo(request, "/login");
         }
       }
     } catch {
@@ -44,19 +61,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/") {
-    return NextResponse.redirect(
-      new URL(hasRefreshToken ? "/dashboard/requests" : "/login", request.url),
-    );
+    return redirectTo(request, hasRefreshToken ? "/dashboard/requests" : "/login");
   }
 
   if (pathname === "/dashboard" || pathname === "/dashboard/") {
-    return NextResponse.redirect(new URL("/dashboard/requests", request.url));
+    return redirectTo(request, "/dashboard/requests");
   }
 
   if (!hasRefreshToken) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return redirectTo(request, "/login", { next: pathname });
   }
 
   return NextResponse.next();

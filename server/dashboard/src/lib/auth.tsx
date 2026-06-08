@@ -9,6 +9,7 @@ import {
 } from "react";
 import { api, setAccessToken } from "@/utils/api";
 import { AUTH_ENDPOINTS } from "@/utils/api-endpoints";
+import { withBasePath } from "@/lib/base-path";
 
 export interface AuthUser {
   id: string;
@@ -39,7 +40,7 @@ export const AuthContext = createContext<AuthContextValue>({
 });
 
 async function storeRefreshToken(refreshToken: string) {
-  await fetch("/api/auth/refresh", {
+  await fetch(withBasePath("/api/auth/refresh"), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -47,11 +48,11 @@ async function storeRefreshToken(refreshToken: string) {
 }
 
 async function clearRefreshToken() {
-  await fetch("/api/auth/refresh", { method: "DELETE" });
+  await fetch(withBasePath("/api/auth/refresh"), { method: "DELETE" });
 }
 
 async function refreshSession(): Promise<boolean> {
-  const res = await fetch("/api/auth/refresh", {
+  const res = await fetch(withBasePath("/api/auth/refresh"), {
     method: "POST",
     credentials: "include",
   });
@@ -115,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearRefreshToken();
     setAccessToken(null);
     setUser(null);
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined") window.location.href = withBasePath("/login");
   }, []);
 
   const value = useMemo<AuthContextValue>(

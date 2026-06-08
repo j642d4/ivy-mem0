@@ -7,6 +7,13 @@ const basePath = process.env.NEXT_BASE_PATH || "";
 const nextConfig = {
   output: "standalone",
   ...(basePath ? { basePath } : {}),
+  // Next.js resolves basePath automatically for <Link>/router navigation and
+  // _next/* assets, but raw `fetch()`/`window.location` calls to the app's own
+  // routes need it prefixed manually. Mirror it here so client code has a
+  // single source of truth instead of a separately-configured env var.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },

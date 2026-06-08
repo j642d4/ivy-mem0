@@ -1,7 +1,8 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
+import { withBasePath } from "@/lib/base-path";
 
 let cachedToken: string | null = null;
-const LOGIN_PATH = "/login";
+const LOGIN_PATH = withBasePath("/login");
 
 export const setAccessToken = (token: string | null) => {
   cachedToken = token;
@@ -22,7 +23,7 @@ const redirectToLogin = () => {
 };
 
 const refreshAccessToken = async () => {
-  const refreshResponse = await fetch("/api/auth/refresh", {
+  const refreshResponse = await fetch(withBasePath("/api/auth/refresh"), {
     method: "POST",
     credentials: "include",
   });
