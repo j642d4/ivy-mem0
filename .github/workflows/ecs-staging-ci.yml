@@ -5,7 +5,7 @@ on:
     branches:
       - staging
       - feature/**
-      - ai-milvus-integrate
+      - ai-secret-manager-integrate
 
 env:
   C_NAME: "ivy-mem0-staging"
