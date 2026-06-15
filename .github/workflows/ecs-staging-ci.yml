@@ -14,7 +14,8 @@ env:
   AWS_LG: "/ecs/staging/ivy-mem0"
   AWS_SP: "mem0"
   T_FAMILY: "ivy-mem0-staging"
-  ECR_REPOSITORY_NAME: "ivy-backend-staging"
+  ECR_REPOSITORY_NAME_BACKEND: "ivy-backend-staging"
+  ECR_REPOSITORY_NAME_DASHBOARD: "ivy-frontend-staging"
 
 jobs:
   build-and-push:
@@ -41,37 +42,42 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and tag Docker image
+      - name: Build and tag backend image
         run: |
           IMAGE_TAG="${{ github.sha }}"
-          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
+          BACKEND_IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME_BACKEND:$IMAGE_TAG"
 
           docker build \
-            -t $IMAGE_URI -f server/dev.Dockerfile .
+            -t $BACKEND_IMAGE_URI -f server/dev.Dockerfile .
 
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          echo "BACKEND_IMAGE_URI=$BACKEND_IMAGE_URI" >> $GITHUB_ENV
 
-      - name: Push Docker image to Amazon ECR
-        run: |
-          docker push ${{ env.IMAGE_URI }}
-
-      - name: Tag latest and push latest
+      - name: Build and tag dashboard image
         run: |
           IMAGE_TAG="${{ github.sha }}"
-          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:$IMAGE_TAG"
-          docker tag $IMAGE_URI \
-                     ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME:latest
+          DASHBOARD_IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME_DASHBOARD:$IMAGE_TAG"
 
-      - name: Save Docker image as artifact
+          docker build \
+            --build-arg NEXT_BASE_PATH=/mem0 \
+            -t $DASHBOARD_IMAGE_URI -f server/dashboard/Dockerfile server/dashboard
+
+          echo "DASHBOARD_IMAGE_URI=$DASHBOARD_IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Push images to Amazon ECR
         run: |
-          docker save -o ivy-mem0-image.tar ${{ env.IMAGE_URI }}
+          docker push ${{ env.BACKEND_IMAGE_URI }}
+          docker push ${{ env.DASHBOARD_IMAGE_URI }}
 
-      - name: Upload Docker image artifact
+      - name: Save Docker images as artifact
+        run: |
+          docker save -o ivy-mem0-images.tar ${{ env.BACKEND_IMAGE_URI }} ${{ env.DASHBOARD_IMAGE_URI }}
+
+      - name: Upload Docker images artifact
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image
-          path: ivy-mem0-image.tar
+          name: docker-images
+          path: ivy-mem0-images.tar
 
     outputs:
-      image_uri: ${{ env.IMAGE_URI }}
+      backend_image_uri: ${{ env.BACKEND_IMAGE_URI }}
+      dashboard_image_uri: ${{ env.DASHBOARD_IMAGE_URI }}
