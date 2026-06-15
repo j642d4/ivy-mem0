@@ -1,9 +1,16 @@
+import os
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
-from db import Base, _build_database_url
+# Load all secrets into os.environ before importing db / config modules.
+if os.getenv("AWS_APP_SECRET_ID"):
+    from config.aws_secrets import load_secrets_to_environ
+    load_secrets_to_environ()
+
+from db import Base
+from config.database_url import resolve_database_url
 
 # Import models so Base.metadata picks up all tables
 import models  # noqa: F401
@@ -15,23 +22,24 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url from alembic.ini with the runtime database URL
-config.set_main_option("sqlalchemy.url", _build_database_url())
+# Resolve the URL once at module load — do NOT use config.set_main_option because
+# ConfigParser treats % in URL-encoded passwords as interpolation syntax (ValueError).
+database_url = resolve_database_url()
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+    context.configure(
+        url=database_url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = create_engine(database_url, poolclass=pool.NullPool)
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():

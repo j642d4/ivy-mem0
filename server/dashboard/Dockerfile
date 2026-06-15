@@ -1,5 +1,5 @@
 FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat aws-cli
 WORKDIR /app
 
 # Dependencies
@@ -39,6 +39,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --chown=nextjs:nodejs entrypoint.sh /home/nextjs/entrypoint.sh
+COPY --chown=nextjs:nodejs scripts/parse-secret.mjs /home/nextjs/parse-secret.mjs
 RUN chmod +x /home/nextjs/entrypoint.sh
 
 USER nextjs
