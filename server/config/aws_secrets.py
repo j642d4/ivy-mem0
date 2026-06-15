@@ -49,6 +49,11 @@ def load_secrets_to_environ() -> None:
         if not os.environ.get(key):
             os.environ[key] = str(value)
             loaded += 1
+
+    if not os.environ.get("POSTGRES_PASSWORD"):
+        os.environ["POSTGRES_PASSWORD"] = fetch_rds_password()
+        loaded += 1
+
     logger.info("Loaded %d keys from Secrets Manager into environment", loaded)
 
 
