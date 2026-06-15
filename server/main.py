@@ -4,6 +4,10 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
+# Must run before ALL local imports so env vars are available at module load time
+from config.aws_secrets import load_secrets_to_environ
+load_secrets_to_environ()
+
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
