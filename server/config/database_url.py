@@ -32,11 +32,8 @@ def resolve_database_url() -> str:
     port = os.getenv("POSTGRES_PORT", "5432")
     db = os.getenv("APP_DB_NAME") or os.getenv("POSTGRES_DB", "mem0_app")
 
-    if os.getenv("AWS_DB_SECRET_ID"):
-        from config.aws_secrets import fetch_rds_password
-        password = fetch_rds_password()
-    else:
-        password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    from config.aws_secrets import fetch_rds_password
+    password = fetch_rds_password()
 
     _cached_url = f"postgresql+psycopg://{quote_plus(user)}:{quote_plus(password)}@{host}:{port}/{db}"
     return _cached_url

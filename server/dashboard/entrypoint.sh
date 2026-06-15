@@ -8,14 +8,12 @@ cd /app
 # Only AWS_APP_SECRET_ID (and optionally AWS_SECRETS_REGION) need to be set
 # in the ECS task definition — everything else comes from the secret, including
 # NEXT_PUBLIC_API_URL, NEXT_PUBLIC_INSTANCE_NAME, and API_INTERNAL_URL.
-if [ -n "$AWS_APP_SECRET_ID" ]; then
-  _secret=$(aws secretsmanager get-secret-value \
-    --secret-id "$AWS_APP_SECRET_ID" \
-    --region "${AWS_SECRETS_REGION:-us-west-2}" \
-    --query SecretString \
-    --output text)
-  eval "$(echo "$_secret" | node /home/nextjs/parse-secret.mjs)"
-fi
+_secret=$(aws secretsmanager get-secret-value \
+  --secret-id "/ivy/staging/secret-manager-mem0" \
+  --region "us-west-2" \
+  --query SecretString \
+  --output text)
+eval "$(echo "$_secret" | node /home/nextjs/parse-secret.mjs)"
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Swap NEXT_PUBLIC_* placeholders baked into .next/ at build time with the

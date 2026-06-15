@@ -11,16 +11,14 @@ Two secrets are used:
 2. AWS_DB_SECRET_ID   — RDS-managed secret (standard AWS RDS rotation format).
    Contains the `password` field used to build the PostgreSQL connection URL.
 
-Only these three values are read from the ECS task definition / .env directly:
-  AWS_APP_SECRET_ID   - Secrets Manager secret name or ARN for app config
-  AWS_DB_SECRET_ID    - Secrets Manager secret name or ARN for RDS credentials
-  AWS_SECRETS_REGION  - AWS region (default: us-west-2)
-
 ECS tasks authenticate via the task IAM role (boto3 default credential chain).
 For local development, set these in .env to assume a role via STS:
   AWS_STAGING_ACCESS_KEY_ID
   AWS_STAGING_SECRET_ACCESS_KEY
   AWS_STAGING_STS_ROLE_ARN
+
+Only one variable is needed in the ECS task definition:
+  USE_AWS_SECRETS=true
 """
 
 from __future__ import annotations
@@ -31,11 +29,14 @@ import os
 
 logger = logging.getLogger(__name__)
 
+APP_SECRET_ID = "/ivy/staging/secret-manager-mem0"
+DB_SECRET_ID  = "rds!db-d582e4ba-4786-41ba-b8f6-11b276c450b9"
+AWS_REGION    = "us-west-2"
+
 
 def _boto3_client(service: str):
     import boto3
 
-    region = os.getenv("AWS_SECRETS_REGION", "us-west-2")
     access_key = os.getenv("AWS_STAGING_ACCESS_KEY_ID", "")
     secret_key = os.getenv("AWS_STAGING_SECRET_ACCESS_KEY", "")
     role_arn = os.getenv("AWS_STAGING_STS_ROLE_ARN", "")
@@ -43,7 +44,7 @@ def _boto3_client(service: str):
     if access_key and secret_key and role_arn:
         sts = boto3.client(
             "sts",
-            region_name=region,
+            region_name=AWS_REGION,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
@@ -51,13 +52,13 @@ def _boto3_client(service: str):
         creds = assumed["Credentials"]
         return boto3.client(
             service,
-            region_name=region,
+            region_name=AWS_REGION,
             aws_access_key_id=creds["AccessKeyId"],
             aws_secret_access_key=creds["SecretAccessKey"],
             aws_session_token=creds["SessionToken"],
         )
 
-    return boto3.client(service, region_name=region)
+    return boto3.client(service, region_name=AWS_REGION)
 
 
 def _fetch_secret(secret_id: str) -> dict:
@@ -74,11 +75,7 @@ def load_secrets_to_environ() -> None:
     Does NOT include the database password — that is fetched separately from
     the RDS secret by fetch_rds_password().
     """
-    secret_id = os.getenv("AWS_APP_SECRET_ID", "")
-    if not secret_id:
-        raise ValueError("AWS_APP_SECRET_ID must be set to use Secrets Manager")
-
-    secret = _fetch_secret(secret_id)
+    secret = _fetch_secret(APP_SECRET_ID)
 
     for key, value in secret.items():
         if not os.environ.get(key):
@@ -93,11 +90,7 @@ def fetch_rds_password() -> str:
     The RDS secret uses the standard AWS rotation format where the password
     is stored under the key `password`.
     """
-    secret_id = os.getenv("AWS_DB_SECRET_ID", "")
-    if not secret_id:
-        raise ValueError("AWS_DB_SECRET_ID must be set to fetch the RDS database password")
-
-    secret = _fetch_secret(secret_id)
+    secret = _fetch_secret(DB_SECRET_ID)
     password = secret.get("password", "")
     if not password:
         raise ValueError(f"No 'password' key found in RDS secret: {secret_id}")

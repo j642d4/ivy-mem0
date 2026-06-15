@@ -5,9 +5,8 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 # Load all secrets into os.environ before importing db / config modules.
-if os.getenv("AWS_APP_SECRET_ID"):
-    from config.aws_secrets import load_secrets_to_environ
-    load_secrets_to_environ()
+from config.aws_secrets import load_secrets_to_environ
+load_secrets_to_environ()
 
 from db import Base
 from config.database_url import resolve_database_url

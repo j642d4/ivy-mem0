@@ -8,9 +8,8 @@ from typing import Any, Dict, List, Optional
 # Must run before ALL local imports: auth.py, db.py, etc. read os.environ at
 # module level, so os.environ must be fully populated before those imports run.
 # Only requires AWS_APP_SECRET_ID and AWS_SECRETS_REGION from .env / task definition.
-if os.getenv("AWS_APP_SECRET_ID"):
-    from config.aws_secrets import load_secrets_to_environ
-    load_secrets_to_environ()
+from config.aws_secrets import load_secrets_to_environ
+load_secrets_to_environ()
 # ─────────────────────────────────────────────────────────────────────────────
 
 from dotenv import load_dotenv
