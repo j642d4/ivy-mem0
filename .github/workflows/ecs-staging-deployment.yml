@@ -9,6 +9,7 @@ on:
 
 env:
   C_NAME: "ivy-mem0-staging"
+  CLUSTER_NAME: "ivy-ecs-cluster-staging"
   ECS_SERVICE: "ivy-mem0-staging"
   TR_ARN: "ecs-task-role-ivy-mem0-staging"
   ER_ARN: "ecs-task-execution-role-ivy-mem0-staging"
@@ -121,5 +122,5 @@ jobs:
         with:
           task-definition: resolved-task-definition.json
           service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.C_NAME }}
+          cluster: ${{ env.CLUSTER_NAME }}
           wait-for-service-stability: true
