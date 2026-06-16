@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - staging
-      - feature/**
-      - ai-integarte-secret-manager
 
 env:
   C_NAME: "ivy-mem0-staging"
