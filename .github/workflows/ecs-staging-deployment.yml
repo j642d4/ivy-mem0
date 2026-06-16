@@ -44,6 +44,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and tag backend image
+        id: build-backend
         run: |
           IMAGE_TAG="${{ github.sha }}"
           BACKEND_IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME_BACKEND:$IMAGE_TAG"
@@ -52,8 +53,10 @@ jobs:
             -t $BACKEND_IMAGE_URI -f server/dev.Dockerfile .
 
           echo "BACKEND_IMAGE_URI=$BACKEND_IMAGE_URI" >> $GITHUB_ENV
+          echo "image_uri=$BACKEND_IMAGE_URI" >> $GITHUB_OUTPUT
 
       - name: Build and tag dashboard image
+        id: build-dashboard
         run: |
           IMAGE_TAG="${{ github.sha }}"
           DASHBOARD_IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY_NAME_DASHBOARD:$IMAGE_TAG"
@@ -63,6 +66,7 @@ jobs:
             -t $DASHBOARD_IMAGE_URI -f server/dashboard/Dockerfile server/dashboard
 
           echo "DASHBOARD_IMAGE_URI=$DASHBOARD_IMAGE_URI" >> $GITHUB_ENV
+          echo "image_uri=$DASHBOARD_IMAGE_URI" >> $GITHUB_OUTPUT
 
       - name: Push images to Amazon ECR
         run: |
@@ -80,8 +84,8 @@ jobs:
           path: ivy-mem0-images.tar
 
     outputs:
-      backend_image_uri: ${{ env.BACKEND_IMAGE_URI }}
-      dashboard_image_uri: ${{ env.DASHBOARD_IMAGE_URI }}
+      backend_image_uri: ${{ steps.build-backend.outputs.image_uri }}
+      dashboard_image_uri: ${{ steps.build-dashboard.outputs.image_uri }}
 
   deploy:
     needs: build-and-push
