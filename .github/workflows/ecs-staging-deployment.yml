@@ -10,7 +10,7 @@ on:
 env:
   C_NAME: "ivy-mem0-staging"
   CLUSTER_NAME: "ivy-ecs-cluster-staging"
-  ECS_SERVICE: "ivy-mem0-staging"
+  ECS_SERVICE: "ivy-mem0"
   TR_ARN: "ecs-task-role-ivy-mem0-staging"
   ER_ARN: "ecs-task-execution-role-ivy-mem0-staging"
   AWS_LG: "/ecs/staging/ivy-mem0"
