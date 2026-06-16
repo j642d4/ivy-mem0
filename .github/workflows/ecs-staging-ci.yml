@@ -9,6 +9,7 @@ on:
 
 env:
   C_NAME: "ivy-mem0-staging"
+  ECS_SERVICE: "ivy-mem0-staging"
   TR_ARN: "ecs-task-role-ivy-mem0-staging"
   ER_ARN: "ecs-task-execution-role-ivy-mem0-staging"
   AWS_LG: "/ecs/staging/ivy-mem0"
@@ -81,3 +82,57 @@ jobs:
     outputs:
       backend_image_uri: ${{ env.BACKEND_IMAGE_URI }}
       dashboard_image_uri: ${{ env.DASHBOARD_IMAGE_URI }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STG }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve task definition placeholders
+        run: |
+          sed \
+            -e "s|<ACCOUNT_ID>|${{ secrets.AWS_ACCOUNT_ID }}|g" \
+            -e "s|<AWS_REGION>|${{ vars.AWS_REGION }}|g" \
+            -e "s|<TR_ARN>|${{ env.TR_ARN }}|g" \
+            -e "s|<ER_ARN>|${{ env.ER_ARN }}|g" \
+            -e "s|<AWS_LG>|${{ env.AWS_LG }}|g" \
+            -e "s|<T_FAMILY>|${{ env.T_FAMILY }}|g" \
+            -e "s|<BACKEND_IMAGE>|${{ needs.build-and-push.outputs.backend_image_uri }}|g" \
+            -e "s|<DASHBOARD_IMAGE>|${{ needs.build-and-push.outputs.dashboard_image_uri }}|g" \
+            ecs_task_definition.json > resolved-task-definition.json
+
+      - name: Update backend container image in task definition
+        id: render-backend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: resolved-task-definition.json
+          container-name: mem0-backend
+          image: ${{ needs.build-and-push.outputs.backend_image_uri }}
+
+      - name: Update dashboard container image in task definition
+        id: render-dashboard
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-backend.outputs.task-definition }}
+          container-name: mem0-dashboard
+          image: ${{ needs.build-and-push.outputs.dashboard_image_uri }}
+
+      - name: Deploy updated task definition to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-dashboard.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.C_NAME }}
+          wait-for-service-stability: true
