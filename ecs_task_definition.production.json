@@ -27,7 +27,7 @@
             "environment": [
                 {
                     "name": "ENVIRONMENT",
-                    "value": "staging"
+                    "value": "production"
                 }
             ],
             "secrets": [],

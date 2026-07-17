@@ -1,0 +1,75 @@
+name: List Production ECR Images
+
+on:
+  workflow_dispatch:
+
+env:
+  ECR_REPOSITORY_NAME_BACKEND: "ivy-backend-production"
+  ECR_REPOSITORY_NAME_DASHBOARD: "ivy-frontend-production"
+
+jobs:
+  list-images:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Fetch backend image details
+        run: |
+          aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY_NAME_BACKEND" \
+            --region ${{ vars.AWS_REGION }} \
+            --output json > backend-images.json
+
+      - name: Fetch dashboard image details
+        run: |
+          aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY_NAME_DASHBOARD" \
+            --region ${{ vars.AWS_REGION }} \
+            --output json > dashboard-images.json
+
+      - name: Render tag lists to job summary
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          def render(title, repo, path):
+              with open(path) as f:
+                  data = json.load(f)
+
+              images = data.get("imageDetails", [])
+              images.sort(key=lambda i: i.get("imagePushedAt", ""), reverse=True)
+
+              lines = [
+                  f"## {title} (`{repo}`)",
+                  "",
+                  "| Tags | Pushed |",
+                  "|------|--------|",
+              ]
+              for img in images:
+                  tags = ", ".join(f"`{t}`" for t in img.get("imageTags", [])) or "_untagged_"
+                  pushed = img.get("imagePushedAt", "")
+                  lines.append(f"| {tags} | {pushed} |")
+
+              return "\n".join(lines) + "\n"
+
+          summary = [
+              "# Production ECR Images",
+              "",
+              "Copy a tag from here into the `image_tag` input of the production deploy workflow to redeploy it as-is.",
+              "",
+              render("Backend", os.environ["ECR_REPOSITORY_NAME_BACKEND"], "backend-images.json"),
+              render("Dashboard", os.environ["ECR_REPOSITORY_NAME_DASHBOARD"], "dashboard-images.json"),
+          ]
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(summary))
+          PY
