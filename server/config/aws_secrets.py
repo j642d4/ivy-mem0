@@ -4,8 +4,15 @@ import os
 
 logger = logging.getLogger(__name__)
 
-APP_SECRET_ID = "/ivy/staging/secret-manager-mem0"
-DB_SECRET_ID = "rds!db-d582e4ba-4786-41ba-b8f6-11b276c450b9"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "staging")
+
+if ENVIRONMENT == "production":
+    APP_SECRET_ID = "/ivy/production/secret-manager-mem0"
+    DB_SECRET_ID = "rds!db-5ddce0ad-cf41-420b-8831-ae57888efebc"
+else:
+    APP_SECRET_ID = "/ivy/staging/secret-manager-mem0"
+    DB_SECRET_ID = "rds!db-d582e4ba-4786-41ba-b8f6-11b276c450b9"
+
 AWS_REGION = "us-west-2"
 
 
