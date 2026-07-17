@@ -1,0 +1,90 @@
+{
+    "family": "<T_FAMILY>",
+    "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/<TR_ARN>",
+    "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/<ER_ARN>",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "2048",
+    "volumes": [],
+    "placementConstraints": [],
+    "containerDefinitions": [
+        {
+            "name": "mem0-backend",
+            "image": "<BACKEND_IMAGE>",
+            "cpu": 512,
+            "memory": 1024,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "ENVIRONMENT",
+                    "value": "production"
+                }
+            ],
+            "secrets": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "<AWS_LG>",
+                    "awslogs-region": "<AWS_REGION>",
+                    "awslogs-stream-prefix": "mem0-backend"
+                }
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "curl -fsS http://localhost:8000/docs || exit 1"
+                ],
+                "interval": 15,
+                "timeout": 5,
+                "retries": 3,
+                "startPeriod": 30
+            },
+            "systemControls": []
+        },
+        {
+            "name": "mem0-dashboard",
+            "image": "<DASHBOARD_IMAGE>",
+            "cpu": 512,
+            "memory": 1024,
+            "portMappings": [
+                {
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "secrets": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "mem0-backend",
+                    "condition": "START"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "<AWS_LG>",
+                    "awslogs-region": "<AWS_REGION>",
+                    "awslogs-stream-prefix": "mem0-dashboard"
+                }
+            },
+            "systemControls": []
+        }
+    ]
+}
