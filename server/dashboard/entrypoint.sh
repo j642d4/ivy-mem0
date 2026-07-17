@@ -3,8 +3,15 @@ set -e
 
 cd /app
 
+ENVIRONMENT="${ENVIRONMENT:-staging}"
+if [ "$ENVIRONMENT" = "production" ]; then
+  SECRET_ID="/ivy/production/secret-manager-mem0"
+else
+  SECRET_ID="/ivy/staging/secret-manager-mem0"
+fi
+
 _secret=$(aws secretsmanager get-secret-value \
-  --secret-id "/ivy/staging/secret-manager-mem0" \
+  --secret-id "$SECRET_ID" \
   --region "us-west-2" \
   --query SecretString \
   --output text)
